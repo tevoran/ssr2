@@ -5,6 +5,7 @@
 #include <SDL2/SDL_ttf.h>
 
 #include <iostream>
+#include <cstdio>
 
 
 namespace ssr
@@ -24,10 +25,15 @@ namespace ssr
 		int resy;
 		SDL_Window *window=NULL;
 		SDL_Surface *window_surface=NULL;
+
+	private:
+		void draw_pixel(const int x, const int y, const ssr::vertex& vertex);
+
 	public:
 		renderer(const int resx_in, const int resy_in);
 		~renderer();
 
+		void render(ssr::vertex vertex);
 		void update();
 	};
 }

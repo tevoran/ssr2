@@ -32,4 +32,30 @@ ssr::renderer::~renderer()
 void ssr::renderer::update()
 {
 	SDL_UpdateWindowSurface(window);
+	memset((void*)window_surface->pixels, 0, resx*resy*sizeof(uint32_t)); //clearing screen
+}
+
+void ssr::renderer::draw_pixel(const int x, const int y, const ssr::vertex& vertex)
+{ 
+	uint32_t *pixel_ptr=(uint32_t*)window_surface->pixels;
+	pixel_ptr=pixel_ptr+x+y*resx;
+
+	register uint32_t pixel_color=vertex.r;
+	pixel_color=pixel_color<<8;
+	pixel_color+=vertex.g;
+	pixel_color=pixel_color<<8;
+	pixel_color+=vertex.b;
+
+	*pixel_ptr=pixel_color;
+}
+
+
+void ssr::renderer::render(ssr::vertex vertex)
+{
+	//convertion to screen space 
+	//screen space ranges from 0 to 1
+	int vertex_screen_x=vertex.x*resx+0.5;
+	int vertex_screen_y=vertex.y*resy+0.5;
+
+	draw_pixel(vertex_screen_x, vertex_screen_y, vertex);
 }
