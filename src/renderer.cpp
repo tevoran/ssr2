@@ -35,58 +35,6 @@ void ssr::renderer::update()
 	memset((void*)window_surface->pixels, 0, resx*resy*sizeof(uint32_t)); //clearing screen
 }
 
-void ssr::renderer::draw_pixel(const int x, const int y, const ssr::vertex& vertex)
-{ 
-	uint32_t *pixel_ptr=(uint32_t*)window_surface->pixels;
-	pixel_ptr=pixel_ptr+x+y*resx;
-
-	register uint32_t pixel_color=vertex.r;
-	pixel_color=pixel_color<<8;
-	pixel_color+=vertex.g;
-	pixel_color=pixel_color<<8;
-	pixel_color+=vertex.b;
-
-	*pixel_ptr=pixel_color;
-}
-
-void ssr::renderer::draw_pixel(const int x, const int y, const uint8_t r, const uint8_t g, const uint8_t b)
-{
-	uint32_t *pixel_ptr=(uint32_t*)window_surface->pixels;
-	pixel_ptr=pixel_ptr+x+y*resx;
-
-	register uint32_t pixel_color=r;
-	pixel_color=pixel_color<<8;
-	pixel_color+=g;
-	pixel_color=pixel_color<<8;
-	pixel_color+=b;
-
-	*pixel_ptr=pixel_color;
-}
-
-//barycentric interpolation
-void ssr::renderer::interpolate(
-							const int x1,
-							const int y1,
-							const int x2,
-							const int y2,
-							const int x3,
-							const int y3,
-							const int x_current,
-							const int y_current,
-							float *a_out,
-							float *b_out,
-							float *c_out)
-{
-	int div=(x2-x1)*(y3-y2)-(y2-y1)*(x3-x2);
-
-	*a_out=(float)((x2-x_current)*(y3-y_current)-(x3-x_current)*(y2-y_current))
-			/(float)div;
-
-	*b_out=(float)((x3-x_current)*(y1-y_current)-(x1-x_current)*(y3-y_current))
-			/(float)div;
-
-	*c_out=1-*a_out-*b_out;
-}
 
 void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::vertex& vertex1, ssr::vertex& vertex2, ssr::vertex& vertex3)
 {
@@ -160,32 +108,50 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 	}
 
 	//rasterizing loop
-	float a=0, b=0, c=0;
+	float a=0, b=0, c=0; //barycentric coordinates
 
-	for(int iy=y_start; iy<y_stop; iy++)
-	{
-		for(int ix=x_start; ix<x_stop; ix++)
-		{
-			interpolate(
+	ssr::barycentric_interpolation triangle(
 				screen1_x,
 				screen1_y,
 				screen2_x,
 				screen2_y,
 				screen3_x,
-				screen3_y,
-				ix,
-				iy,
-				&a,	
-				&b,	
-				&c);
+				screen3_y);
+
+	for(int iy=y_start; iy<y_stop; iy++)
+	{
+		bool last_pixel_drawn=false;
+		uint32_t *pixel_ptr=NULL;
+
+		//rendering a line
+		for(int ix=x_start; ix<x_stop; ix++)
+		{
+			triangle.interpolate_pixel(ix,iy,&a,&b,&c);
 			
-			if(a<1 && a>0 && b<1 && b>0 && c<1 && c>0) //condition of a pixel inside the triangle
+			//condition of a pixel inside the triangle
+			if(a<1 && a>0 && b<1 && b>0 && c<1 && c>0) 
 			{
+				if(last_pixel_drawn==false) //if this is the first pixel of the current line
+				{
+					//setting up pixel pointer
+					pixel_ptr=(uint32_t*)window_surface->pixels;
+					pixel_ptr=pixel_ptr+ix+iy*resx;
+				}
+				last_pixel_drawn=true;
 				uint8_t r=(float)(a*(float)vertex1.r)+(float)(b*(float)vertex2.r)+(float)(c*(float)vertex3.r);
 				uint8_t g=(float)(a*(float)vertex1.g)+(float)(b*(float)vertex2.g)+(float)(c*(float)vertex3.g);
 				uint8_t b=(float)(a*(float)vertex1.b)+(float)(b*(float)vertex2.b)+(float)(c*(float)vertex3.b);
-				draw_pixel(ix, iy, r,g,b);	
-			}		
+				draw_pixel(pixel_ptr, r,g,b);
+				pixel_ptr++;
+			}
+			//if last pixel of a horizontal line is drawn, go to next line
+			else
+			{
+				if(last_pixel_drawn==true)
+				{
+					break;
+				}
+			}
 		}
 	}
 

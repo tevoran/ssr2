@@ -1,6 +1,6 @@
 #include "ssr2.hpp"
 
-#define REPETITIONS 10
+#define REPETITIONS 100
 
 int main()
 {
