@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <chrono>
 #include <ratio>
+#include <thread>
 
 
 namespace ssr
@@ -48,7 +49,6 @@ namespace ssr
 		void interpolate_pixel(const int x_current, const int y_current, float *a_out, float *b_out, float *c_out);
 	};
 
-
 	struct vertex
 	{
 	private:
@@ -65,6 +65,7 @@ namespace ssr
 		SDL_Window *window=NULL;
 		SDL_Surface *window_surface=NULL;
 
+		int num_cpu;
 	private:
 		void draw_pixel(const int x, const int y, const ssr::vertex& vertex);
 		void draw_pixel(uint32_t *pixel_ptr, const uint8_t r, const uint8_t g, const uint8_t b);

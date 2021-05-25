@@ -22,6 +22,8 @@ ssr::renderer::renderer(const int resx_in, const int resy_in)
 		exit(0);
 	}
 
+	num_cpu=std::thread::hardware_concurrency();
+	std::cout << "Usable CPU cores or threads: " << num_cpu << std::endl;
 }
 
 ssr::renderer::~renderer()
@@ -32,7 +34,7 @@ ssr::renderer::~renderer()
 void ssr::renderer::update()
 {
 	SDL_UpdateWindowSurface(window);
-	memset((void*)window_surface->pixels, 0, resx*resy*sizeof(uint32_t)); //clearing screen
+	memset(window_surface->pixels, 0, resx*resy*sizeof(uint32_t)); //clearing screen
 }
 
 
@@ -48,6 +50,15 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 
 	int screen3_x=vertex3.x*resx+0.5;
 	int screen3_y=vertex3.y*resy+0.5;
+
+
+	//calculating the side along the y-axis of the triangle
+	if(screen3_y-screen1_y==0)
+	{
+		screen3_y++;
+	}
+	float current_x, delta;
+	delta=(screen3_x-screen1_x)/(screen3_y-screen1_y);
 
 	//creating bounding box for rasterizing
 	int x_start=screen1_x;
@@ -96,6 +107,8 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 		y_start=y_begin;
 	}
 
+	current_x=(y_start-screen1_y)*delta+screen1_x;
+
 	//if triangle is not in the area that is rendered by the thread then it is dropped
 	if(y_start>y_stop)
 	{
@@ -107,7 +120,6 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 		y_stop=y_end;
 	}
 
-	//rasterizing loop
 	float a=0, b=0, c=0; //barycentric coordinates
 
 	ssr::barycentric_interpolation triangle(
@@ -118,13 +130,15 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 				screen3_x,
 				screen3_y);
 
+	//rasterizing loop
 	for(int iy=y_start; iy<y_stop; iy++)
 	{
+		current_x+=delta;
 		bool last_pixel_drawn=false;
 		uint32_t *pixel_ptr=NULL;
 
 		//rendering a line
-		for(int ix=x_start; ix<x_stop; ix++)
+		for(int ix=(int)current_x; ix<x_stop; ix++)
 		{
 			triangle.interpolate_pixel(ix,iy,&a,&b,&c);
 			
@@ -173,5 +187,6 @@ void ssr::renderer::render(ssr::vertex& vertex1, ssr::vertex& vertex2, ssr::vert
 		std::swap(vertex1, vertex2);
 	}
 
+	int num_threads=0;
 	rasterize_triangle(0, resy, vertex1, vertex2, vertex3);
 }
