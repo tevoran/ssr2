@@ -49,6 +49,20 @@ void ssr::renderer::draw_pixel(const int x, const int y, const ssr::vertex& vert
 	*pixel_ptr=pixel_color;
 }
 
+void ssr::renderer::draw_pixel(const int x, const int y, const uint8_t r, const uint8_t g, const uint8_t b)
+{
+	uint32_t *pixel_ptr=(uint32_t*)window_surface->pixels;
+	pixel_ptr=pixel_ptr+x+y*resx;
+
+	register uint32_t pixel_color=r;
+	pixel_color=pixel_color<<8;
+	pixel_color+=g;
+	pixel_color=pixel_color<<8;
+	pixel_color+=b;
+
+	*pixel_ptr=pixel_color;
+}
+
 //barycentric interpolation
 void ssr::renderer::interpolate(
 							const int x1,
@@ -153,20 +167,24 @@ void ssr::renderer::rasterize_triangle(const int y_begin, const int y_end, ssr::
 		for(int ix=x_start; ix<x_stop; ix++)
 		{
 			interpolate(
-							screen1_x,
-							screen1_y,
-							screen2_x,
-							screen2_y,
-							screen3_x,
-							screen3_y,
-							ix,
-							iy,
-							&a,	
-							&b,	
-							&c);
-			if(a<1 && a>0 && b<1 && b>0 && c<1 && c>0)
+				screen1_x,
+				screen1_y,
+				screen2_x,
+				screen2_y,
+				screen3_x,
+				screen3_y,
+				ix,
+				iy,
+				&a,	
+				&b,	
+				&c);
+			
+			if(a<1 && a>0 && b<1 && b>0 && c<1 && c>0) //condition of a pixel inside the triangle
 			{
-				draw_pixel(ix, iy, vertex1);	
+				uint8_t r=(float)(a*(float)vertex1.r)+(float)(b*(float)vertex2.r)+(float)(c*(float)vertex3.r);
+				uint8_t g=(float)(a*(float)vertex1.g)+(float)(b*(float)vertex2.g)+(float)(c*(float)vertex3.g);
+				uint8_t b=(float)(a*(float)vertex1.b)+(float)(b*(float)vertex2.b)+(float)(c*(float)vertex3.b);
+				draw_pixel(ix, iy, r,g,b);	
 			}		
 		}
 	}
